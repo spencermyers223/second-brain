@@ -11,6 +11,7 @@ export interface BrainItem {
   priority: Priority;
   status: Status;
   project: Project;
+  notes: string | null;
   tags: string[];
   position: number;
   created_at: string;

@@ -92,6 +92,81 @@ export default function Dashboard() {
     <p className="text-sm text-zinc-700 italic py-2">{text}</p>
   );
 
+  const ReviewCard = ({ item, onUpdate }: { item: BrainItem; onUpdate: () => void }) => {
+    const [expanded, setExpanded] = useState(false);
+    const [updating, setUpdating] = useState(false);
+
+    const handleAction = async (newStatus: 'done' | 'in-progress') => {
+      setUpdating(true);
+      await fetch(`/api/items/${item.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      onUpdate();
+      setUpdating(false);
+    };
+
+    return (
+      <div className="border border-zinc-800 rounded-lg p-3 space-y-2">
+        <div className="flex items-start justify-between gap-2">
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="flex items-start gap-2 text-left flex-1 min-w-0"
+          >
+            <span className="text-amber-400 mt-0.5 text-xs shrink-0">{expanded ? '▼' : '▶'}</span>
+            <div className="min-w-0">
+              <p className="text-sm text-zinc-200 font-medium">{item.title}</p>
+              {item.description && !expanded && (
+                <p className="text-xs text-zinc-500 truncate mt-0.5">{item.description}</p>
+              )}
+            </div>
+          </button>
+          <span className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded border font-medium ${getProjectStyle(item.project)}`}>
+            {item.project}
+          </span>
+        </div>
+        {expanded && (
+          <div className="space-y-3 pl-5">
+            {item.description && (
+              <p className="text-xs text-zinc-400">{item.description}</p>
+            )}
+            {item.notes && (
+              <div className="bg-zinc-800/50 rounded-lg p-3 text-sm text-zinc-300 whitespace-pre-wrap max-h-96 overflow-y-auto">
+                {item.notes}
+              </div>
+            )}
+            {!item.notes && (
+              <p className="text-xs text-zinc-600 italic">No review content attached yet.</p>
+            )}
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={() => handleAction('done')}
+                disabled={updating}
+                className="px-3 py-1.5 text-xs font-medium bg-green-500/10 text-green-400 border border-green-500/20 rounded-lg hover:bg-green-500/20 transition-colors disabled:opacity-50"
+              >
+                ✓ Approve
+              </button>
+              <button
+                onClick={() => handleAction('in-progress')}
+                disabled={updating}
+                className="px-3 py-1.5 text-xs font-medium bg-orange-500/10 text-orange-400 border border-orange-500/20 rounded-lg hover:bg-orange-500/20 transition-colors disabled:opacity-50"
+              >
+                ↩ Needs Changes
+              </button>
+              <Link
+                href={`/items/${item.id}`}
+                className="px-3 py-1.5 text-xs font-medium bg-zinc-700/50 text-zinc-400 border border-zinc-700 rounded-lg hover:bg-zinc-700 transition-colors"
+              >
+                Edit
+              </Link>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // Stats
   const totalActive = items.filter(i => i.status !== 'done').length;
   const totalDone = items.filter(i => i.status === 'done').length;
@@ -109,25 +184,25 @@ export default function Dashboard() {
         </Link>
       </div>
 
-      {/* Top row: In Progress + Needs Review */}
-      {(activeTasks.length > 0 || reviewItems.length > 0) && (
-        <div className="grid md:grid-cols-2 gap-4">
-          {activeTasks.length > 0 && (
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-              <SectionHeader emoji="🔨" title="In Progress" count={activeTasks.length} color="text-blue-400" />
-              <div className="space-y-0.5">
-                {activeTasks.map(item => <ItemRow key={item.id} item={item} />)}
-              </div>
-            </div>
-          )}
-          {reviewItems.length > 0 && (
-            <div className="bg-zinc-900 border border-amber-500/20 rounded-xl p-4">
-              <SectionHeader emoji="👀" title="Needs Review" count={reviewItems.length} color="text-amber-400" />
-              <div className="space-y-0.5">
-                {reviewItems.map(item => <ItemRow key={item.id} item={item} showStatus />)}
-              </div>
-            </div>
-          )}
+      {/* Needs Review — full width, top priority */}
+      {reviewItems.length > 0 && (
+        <div className="bg-zinc-900 border border-amber-500/20 rounded-xl p-4">
+          <SectionHeader emoji="👀" title="Needs Your Review" count={reviewItems.length} color="text-amber-400" />
+          <div className="space-y-3">
+            {reviewItems.map(item => (
+              <ReviewCard key={item.id} item={item} onUpdate={load} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* In Progress */}
+      {activeTasks.length > 0 && (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+          <SectionHeader emoji="🔨" title="In Progress" count={activeTasks.length} color="text-blue-400" />
+          <div className="space-y-0.5">
+            {activeTasks.map(item => <ItemRow key={item.id} item={item} />)}
+          </div>
         </div>
       )}
 
