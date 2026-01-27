@@ -95,14 +95,39 @@ export default function Dashboard() {
   const ReviewCard = ({ item, onUpdate }: { item: BrainItem; onUpdate: () => void }) => {
     const [expanded, setExpanded] = useState(false);
     const [updating, setUpdating] = useState(false);
+    const [showFeedback, setShowFeedback] = useState(false);
+    const [feedback, setFeedback] = useState('');
 
-    const handleAction = async (newStatus: 'done' | 'in-progress') => {
+    const handleApprove = async () => {
       setUpdating(true);
       await fetch(`/api/items/${item.id}`, {
-        method: 'PATCH',
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ status: 'done' }),
       });
+      onUpdate();
+      setUpdating(false);
+    };
+
+    const handleNeedsChanges = async () => {
+      if (!showFeedback) {
+        setShowFeedback(true);
+        return;
+      }
+      if (!feedback.trim()) return;
+      setUpdating(true);
+      const existingNotes = item.notes || '';
+      const feedbackBlock = `\n\n--- FEEDBACK ---\n${feedback.trim()}`;
+      await fetch(`/api/items/${item.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'in-progress',
+          notes: existingNotes + feedbackBlock,
+        }),
+      });
+      setFeedback('');
+      setShowFeedback(false);
       onUpdate();
       setUpdating(false);
     };
@@ -139,24 +164,44 @@ export default function Dashboard() {
             {!item.notes && (
               <p className="text-xs text-zinc-600 italic">No review content attached yet.</p>
             )}
+            {showFeedback && (
+              <div className="space-y-2">
+                <textarea
+                  value={feedback}
+                  onChange={e => setFeedback(e.target.value)}
+                  placeholder="What needs to change?"
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg p-2.5 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-amber-500/50 resize-none"
+                  rows={3}
+                  autoFocus
+                />
+              </div>
+            )}
             <div className="flex gap-2 pt-1">
               <button
-                onClick={() => handleAction('done')}
+                onClick={handleApprove}
                 disabled={updating}
                 className="px-3 py-1.5 text-xs font-medium bg-green-500/10 text-green-400 border border-green-500/20 rounded-lg hover:bg-green-500/20 transition-colors disabled:opacity-50"
               >
                 ✓ Approve
               </button>
               <button
-                onClick={() => handleAction('in-progress')}
-                disabled={updating}
+                onClick={handleNeedsChanges}
+                disabled={updating || (showFeedback && !feedback.trim())}
                 className="px-3 py-1.5 text-xs font-medium bg-orange-500/10 text-orange-400 border border-orange-500/20 rounded-lg hover:bg-orange-500/20 transition-colors disabled:opacity-50"
               >
-                ↩ Needs Changes
+                {showFeedback ? '↩ Send Feedback' : '↩ Needs Changes'}
               </button>
+              {showFeedback && (
+                <button
+                  onClick={() => { setShowFeedback(false); setFeedback(''); }}
+                  className="px-3 py-1.5 text-xs font-medium text-zinc-500 hover:text-zinc-300 transition-colors"
+                >
+                  Cancel
+                </button>
+              )}
               <Link
                 href={`/items/${item.id}`}
-                className="px-3 py-1.5 text-xs font-medium bg-zinc-700/50 text-zinc-400 border border-zinc-700 rounded-lg hover:bg-zinc-700 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium bg-zinc-700/50 text-zinc-400 border border-zinc-700 rounded-lg hover:bg-zinc-700 transition-colors ml-auto"
               >
                 Edit
               </Link>
