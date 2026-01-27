@@ -22,8 +22,10 @@ export default function Dashboard() {
   useEffect(() => { load(); }, [load]);
 
   // Sections
-  const activeTasks = items.filter(i => i.category === 'tasks' && i.status === 'in-progress');
-  const todoTasks = items.filter(i => i.category === 'tasks' && i.status === 'backlog')
+  const activeCategories = ['tasks', 'content-drafts', 'research'];
+  const activeTasks = items.filter(i => activeCategories.includes(i.category) && i.status === 'in-progress');
+  const todoCategories = ['tasks', 'content-drafts', 'research'];
+  const todoTasks = items.filter(i => todoCategories.includes(i.category) && i.status === 'backlog')
     .sort((a, b) => {
       const po = { high: 0, medium: 1, low: 2 };
       return po[a.priority] - po[b.priority];
@@ -45,25 +47,39 @@ export default function Dashboard() {
     return '•';
   };
 
-  const ItemRow = ({ item, showProject = true, showStatus = false }: { item: BrainItem; showProject?: boolean; showStatus?: boolean }) => (
-    <Link
-      href={`/items/${item.id}`}
-      className="flex items-center gap-2.5 py-2 px-2.5 -mx-2.5 rounded-lg hover:bg-zinc-800/50 transition-colors group"
-    >
-      <span className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded border font-medium ${getPriorityStyle(item.priority)}`}>
-        {item.priority === 'high' ? '!!!' : item.priority === 'medium' ? '!!' : '!'}
-      </span>
-      <span className="text-sm text-zinc-200 truncate flex-1 group-hover:text-white">{item.title}</span>
-      {showProject && (
-        <span className={`hidden sm:inline text-[10px] px-1.5 py-0.5 rounded border font-medium ${getProjectStyle(item.project)}`}>
-          {item.project}
+  const categoryLabel = (cat: string) => {
+    if (cat === 'content-drafts') return { text: 'draft', style: 'text-pink-400 bg-pink-400/10 border-pink-400/20' };
+    if (cat === 'research') return { text: 'research', style: 'text-purple-400 bg-purple-400/10 border-purple-400/20' };
+    return null;
+  };
+
+  const ItemRow = ({ item, showProject = true, showStatus = false, showCategory = false }: { item: BrainItem; showProject?: boolean; showStatus?: boolean; showCategory?: boolean }) => {
+    const catLabel = showCategory ? categoryLabel(item.category) : null;
+    return (
+      <Link
+        href={`/items/${item.id}`}
+        className="flex items-center gap-2.5 py-2 px-2.5 -mx-2.5 rounded-lg hover:bg-zinc-800/50 transition-colors group"
+      >
+        <span className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded border font-medium ${getPriorityStyle(item.priority)}`}>
+          {item.priority === 'high' ? '!!!' : item.priority === 'medium' ? '!!' : '!'}
         </span>
-      )}
-      {showStatus && (
-        <span className="text-[10px] text-zinc-500">{item.status}</span>
-      )}
-    </Link>
-  );
+        <span className="text-sm text-zinc-200 truncate flex-1 group-hover:text-white">{item.title}</span>
+        {catLabel && (
+          <span className={`hidden sm:inline text-[10px] px-1.5 py-0.5 rounded border font-medium ${catLabel.style}`}>
+            {catLabel.text}
+          </span>
+        )}
+        {showProject && (
+          <span className={`hidden sm:inline text-[10px] px-1.5 py-0.5 rounded border font-medium ${getProjectStyle(item.project)}`}>
+            {item.project}
+          </span>
+        )}
+        {showStatus && (
+          <span className="text-[10px] text-zinc-500">{item.status}</span>
+        )}
+      </Link>
+    );
+  };
 
   const SectionHeader = ({ emoji, title, count, color = 'text-zinc-400' }: { emoji: string; title: string; count: number; color?: string }) => (
     <div className="flex items-center justify-between mb-3">
@@ -124,7 +140,7 @@ export default function Dashboard() {
             <EmptyState text="All caught up!" />
           ) : (
             <div className="space-y-0.5">
-              {todoTasks.map(item => <ItemRow key={item.id} item={item} />)}
+              {todoTasks.map(item => <ItemRow key={item.id} item={item} showCategory />)}
             </div>
           )}
         </div>
