@@ -41,6 +41,7 @@ export default function Dashboard() {
     .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
     .slice(0, 5);
   const ideas = items.filter(i => i.category === 'ideas' && i.status !== 'done');
+  const futureProjects = items.filter(i => i.category === 'future-projects' && i.status !== 'done');
 
   const actionIcon = (action: string) => {
     if (action === 'created') return '✦';
@@ -343,6 +344,20 @@ export default function Dashboard() {
           ) : (
             <div className="space-y-0.5">
               {ideas.map(item => <ItemRow key={item.id} item={item} showProject={false} />)}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Future Projects */}
+      <div className="grid md:grid-cols-1 gap-4">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+          <SectionHeader emoji="🚀" title="Future Projects" count={futureProjects.length} color="text-cyan-400" />
+          {futureProjects.length === 0 ? (
+            <EmptyState text="No future projects yet" />
+          ) : (
+            <div className="space-y-0.5">
+              {futureProjects.map(item => <ItemRow key={item.id} item={item} showProject />)}
             </div>
           )}
         </div>
