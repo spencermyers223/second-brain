@@ -1,4 +1,4 @@
-export type Category = 'ideas' | 'tasks' | 'research' | 'content-drafts' | 'shipped' | 'learnings';
+export type Category = 'ideas' | 'tasks' | 'research' | 'content-drafts' | 'shipped' | 'learnings' | 'goals';
 export type Priority = 'high' | 'medium' | 'low';
 export type Status = 'backlog' | 'in-progress' | 'review-needed' | 'done';
 export type Project = 'xthread' | 'nomad-research' | 'general';
@@ -32,6 +32,7 @@ export const CATEGORIES: { value: Category; label: string }[] = [
   { value: 'content-drafts', label: 'Content Drafts' },
   { value: 'shipped', label: 'Shipped' },
   { value: 'learnings', label: 'Learnings' },
+  { value: 'goals', label: 'Goals' },
 ];
 
 export const PRIORITIES: { value: Priority; label: string; color: string }[] = [
