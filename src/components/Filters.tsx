@@ -1,6 +1,6 @@
 'use client';
 
-import { Category, Priority, Project, CATEGORIES, PRIORITIES, PROJECTS } from '@/lib/types';
+import { CATEGORIES, PRIORITIES, PROJECTS } from '@/lib/types';
 
 interface FiltersProps {
   project: string;
