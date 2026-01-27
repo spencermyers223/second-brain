@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { BrainItem, Category, Priority, Project, Status, CATEGORIES, PRIORITIES, PROJECTS, STATUSES, getPriorityStyle, getProjectStyle } from '@/lib/types';
+import { Attachment, BrainItem, Category, Priority, Project, Status, CATEGORIES, PRIORITIES, PROJECTS, STATUSES, getPriorityStyle, getProjectStyle } from '@/lib/types';
 import { formatDistanceToNow } from '@/lib/utils';
+import AttachmentUploader from '@/components/AttachmentUploader';
+import AttachmentGallery from '@/components/AttachmentGallery';
 
 export default function ItemDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -20,6 +22,7 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
   const [status, setStatus] = useState<Status>('backlog');
   const [project, setProject] = useState<Project>('general');
   const [tagsStr, setTagsStr] = useState('');
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
 
   useEffect(() => {
     fetch(`/api/items/${params.id}`)
@@ -33,6 +36,7 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
         setStatus(data.status);
         setProject(data.project);
         setTagsStr((data.tags || []).join(', '));
+        setAttachments(data.attachments || []);
         setLoading(false);
       });
   }, [params.id]);
@@ -43,7 +47,7 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
     const res = await fetch(`/api/items/${params.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, description: description || null, category, priority, status, project, tags }),
+      body: JSON.stringify({ title, description: description || null, category, priority, status, project, tags, attachments }),
     });
     if (res.ok) {
       setItem(await res.json());
@@ -105,6 +109,7 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
           <label className="block text-sm text-zinc-400 mb-1.5">Tags</label>
           <input value={tagsStr} onChange={(e) => setTagsStr(e.target.value)} className={sel} />
         </div>
+        <AttachmentUploader attachments={attachments} onChange={setAttachments} />
         <div className="flex gap-3">
           <button onClick={() => setEditing(false)} className="flex-1 py-2.5 rounded-lg border border-zinc-700 text-zinc-400 hover:text-white transition-colors">Cancel</button>
           <button onClick={handleSave} disabled={saving} className="flex-1 py-2.5 rounded-lg bg-white text-black font-medium disabled:opacity-50">{saving ? 'Saving...' : 'Save'}</button>
@@ -147,6 +152,8 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
           ))}
         </div>
       )}
+
+      <AttachmentGallery attachments={item.attachments || []} />
 
       {/* Quick status change */}
       <div>

@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Category, Priority, Project, Status, CATEGORIES, PRIORITIES, PROJECTS, STATUSES } from '@/lib/types';
+import { Attachment, Category, Priority, Project, Status, CATEGORIES, PRIORITIES, PROJECTS, STATUSES } from '@/lib/types';
+import AttachmentUploader from '@/components/AttachmentUploader';
 
 export default function NewItemPage() {
   const router = useRouter();
@@ -14,6 +15,7 @@ export default function NewItemPage() {
   const [status, setStatus] = useState<Status>('backlog');
   const [project, setProject] = useState<Project>('general');
   const [tagsStr, setTagsStr] = useState('');
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +27,7 @@ export default function NewItemPage() {
     const res = await fetch('/api/items', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, description: description || null, category, priority, status, project, tags }),
+      body: JSON.stringify({ title, description: description || null, category, priority, status, project, tags, attachments }),
     });
 
     if (res.ok) {
@@ -79,6 +81,7 @@ export default function NewItemPage() {
           <label className="block text-sm text-zinc-400 mb-1.5">Tags (comma separated)</label>
           <input value={tagsStr} onChange={(e) => setTagsStr(e.target.value)} className={sel} placeholder="crypto, defi, thread" />
         </div>
+        <AttachmentUploader attachments={attachments} onChange={setAttachments} />
         <button type="submit" disabled={loading || !title.trim()} className="w-full py-3 rounded-lg bg-white text-black font-semibold disabled:opacity-50 hover:bg-zinc-200 transition-colors">
           {loading ? 'Creating...' : 'Create Item'}
         </button>
