@@ -25,11 +25,13 @@ export default function Dashboard() {
   const activeCategories = ['tasks', 'content-drafts', 'research'];
   const activeTasks = items.filter(i => activeCategories.includes(i.category) && i.status === 'in-progress');
   const todoCategories = ['tasks', 'content-drafts', 'research'];
-  const todoTasks = items.filter(i => todoCategories.includes(i.category) && i.status === 'backlog')
+  const allTodo = items.filter(i => todoCategories.includes(i.category) && i.status === 'backlog')
     .sort((a, b) => {
       const po = { high: 0, medium: 1, low: 2 };
       return po[a.priority] - po[b.priority];
     });
+  const spencerTodo = allTodo.filter(i => i.assignee === 'spencer' || i.assignee === 'both');
+  const jarvisTodo = allTodo.filter(i => i.assignee === 'jarvis');
   const reviewItems = items.filter(i => i.status === 'review-needed');
   const goals = items.filter(i => i.category === 'goals' && i.status !== 'done');
   const contentDrafts = items.filter(i => i.category === 'content-drafts' && i.status !== 'done');
@@ -253,14 +255,26 @@ export default function Dashboard() {
 
       {/* Main grid: To Do + Goals */}
       <div className="grid md:grid-cols-3 gap-4">
-        {/* To Do - takes 2 cols */}
-        <div className="md:col-span-2 bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-          <SectionHeader emoji="📋" title="To Do" count={todoTasks.length} color="text-white" />
-          {todoTasks.length === 0 ? (
+        {/* Spencer's Tasks */}
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+          <SectionHeader emoji="🧑" title="Your Tasks" count={spencerTodo.length} color="text-white" />
+          {spencerTodo.length === 0 ? (
+            <EmptyState text="Nothing on your plate!" />
+          ) : (
+            <div className="space-y-0.5">
+              {spencerTodo.map(item => <ItemRow key={item.id} item={item} showCategory />)}
+            </div>
+          )}
+        </div>
+
+        {/* Jarvis's Tasks */}
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+          <SectionHeader emoji="🤖" title="Jarvis Tasks" count={jarvisTodo.length} color="text-zinc-400" />
+          {jarvisTodo.length === 0 ? (
             <EmptyState text="All caught up!" />
           ) : (
             <div className="space-y-0.5">
-              {todoTasks.map(item => <ItemRow key={item.id} item={item} showCategory />)}
+              {jarvisTodo.map(item => <ItemRow key={item.id} item={item} showCategory />)}
             </div>
           )}
         </div>

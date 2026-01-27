@@ -2,6 +2,7 @@ export type Category = 'ideas' | 'tasks' | 'research' | 'content-drafts' | 'ship
 export type Priority = 'high' | 'medium' | 'low';
 export type Status = 'backlog' | 'in-progress' | 'review-needed' | 'done';
 export type Project = 'xthread' | 'nomad-research' | 'general';
+export type Assignee = 'spencer' | 'jarvis' | 'both';
 
 export interface BrainItem {
   id: string;
@@ -12,6 +13,7 @@ export interface BrainItem {
   status: Status;
   project: Project;
   notes: string | null;
+  assignee: Assignee;
   tags: string[];
   position: number;
   created_at: string;
