@@ -5,6 +5,7 @@ import { BrainItem, BrainActivity, getPriorityStyle, getProjectStyle } from '@/l
 import { formatDistanceToNow } from '@/lib/utils';
 import Link from 'next/link';
 import QuickAdd from '@/components/QuickAdd';
+import AttachmentGallery from '@/components/AttachmentGallery';
 
 export default function Dashboard() {
   const [items, setItems] = useState<BrainItem[]>([]);
@@ -163,7 +164,10 @@ export default function Dashboard() {
                 {item.notes}
               </div>
             )}
-            {!item.notes && (
+            {item.attachments && item.attachments.length > 0 && (
+              <AttachmentGallery attachments={item.attachments} />
+            )}
+            {!item.notes && (!item.attachments || item.attachments.length === 0) && (
               <p className="text-xs text-zinc-600 italic">No review content attached yet.</p>
             )}
             {showFeedback && (
