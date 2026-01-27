@@ -4,6 +4,13 @@ export type Status = 'backlog' | 'in-progress' | 'review-needed' | 'done';
 export type Project = 'xthread' | 'nomad-research' | 'general';
 export type Assignee = 'spencer' | 'jarvis' | 'both';
 
+export interface Attachment {
+  url: string;
+  name: string;
+  type: string;
+  size: number;
+}
+
 export interface BrainItem {
   id: string;
   title: string;
@@ -15,6 +22,7 @@ export interface BrainItem {
   notes: string | null;
   assignee: Assignee;
   tags: string[];
+  attachments: Attachment[];
   position: number;
   created_at: string;
   updated_at: string;
