@@ -231,17 +231,19 @@ export default function Dashboard() {
         </Link>
       </div>
 
-      {/* Needs Review — full width, top priority */}
-      {reviewItems.length > 0 && (
-        <div className="bg-zinc-900 border border-amber-500/20 rounded-xl p-4">
-          <SectionHeader emoji="👀" title="Needs Your Review" count={reviewItems.length} color="text-amber-400" />
+      {/* Needs Review — always visible */}
+      <div className="bg-zinc-900 border border-amber-500/20 rounded-xl p-4">
+        <SectionHeader emoji="👀" title="Needs Your Review" count={reviewItems.length} color="text-amber-400" />
+        {reviewItems.length === 0 ? (
+          <EmptyState text="Nothing to review — Jarvis is working on it" />
+        ) : (
           <div className="space-y-3">
             {reviewItems.map(item => (
               <ReviewCard key={item.id} item={item} onUpdate={load} />
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* In Progress */}
       {activeTasks.length > 0 && (
