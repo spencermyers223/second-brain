@@ -42,7 +42,7 @@ export default function Dashboard() {
     .slice(0, 5);
   const ideas = items.filter(i => i.category === 'ideas' && i.status !== 'done');
   const futureProjects = items.filter(i => i.category === 'future-projects' && i.status !== 'done');
-  const allBacklog = items.filter(i => i.status === 'backlog')
+  const allBacklog = items.filter(i => i.status === 'backlog' && i.category !== 'goals')
     .sort((a, b) => {
       const po = { high: 0, medium: 1, low: 2 };
       return po[a.priority] - po[b.priority];
