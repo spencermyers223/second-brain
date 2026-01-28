@@ -1,6 +1,6 @@
 export type Category = 'ideas' | 'tasks' | 'research' | 'content-drafts' | 'shipped' | 'learnings' | 'goals' | 'future-projects';
 export type Priority = 'high' | 'medium' | 'low';
-export type Status = 'backlog' | 'in-progress' | 'review-needed' | 'done';
+export type Status = 'backlog' | 'in-progress' | 'review-needed' | 'done' | 'rejected';
 export type Project = 'xthread' | 'nomad-research' | 'general';
 export type Assignee = 'spencer' | 'jarvis' | 'both';
 
@@ -58,6 +58,7 @@ export const STATUSES: { value: Status; label: string }[] = [
   { value: 'in-progress', label: 'In Progress' },
   { value: 'review-needed', label: 'Review Needed' },
   { value: 'done', label: 'Done' },
+  { value: 'rejected', label: 'Rejected' },
 ];
 
 export const PROJECTS: { value: Project; label: string; color: string }[] = [
