@@ -7,6 +7,7 @@ const links = [
   { href: '/', label: 'Dashboard', icon: '◫' },
   { href: '/board', label: 'Board', icon: '☰' },
   { href: '/items', label: 'Items', icon: '☷' },
+  { href: '/files', label: 'Files', icon: '📁' },
   { href: '/items/new', label: 'Quick Add', icon: '+' },
 ];
 
