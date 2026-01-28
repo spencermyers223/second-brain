@@ -42,6 +42,11 @@ export default function Dashboard() {
     .slice(0, 5);
   const ideas = items.filter(i => i.category === 'ideas' && i.status !== 'done');
   const futureProjects = items.filter(i => i.category === 'future-projects' && i.status !== 'done');
+  const allBacklog = items.filter(i => i.status === 'backlog')
+    .sort((a, b) => {
+      const po = { high: 0, medium: 1, low: 2 };
+      return po[a.priority] - po[b.priority];
+    });
 
   const actionIcon = (action: string) => {
     if (action === 'created') return '✦';
@@ -274,6 +279,33 @@ export default function Dashboard() {
           <SectionHeader emoji="🔨" title="In Progress" count={activeTasks.length} color="text-blue-400" />
           <div className="space-y-0.5">
             {activeTasks.map(item => <ItemRow key={item.id} item={item} />)}
+          </div>
+        </div>
+      )}
+
+      {/* Full Backlog */}
+      {allBacklog.length > 0 && (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+          <SectionHeader emoji="📋" title="Backlog" count={allBacklog.length} color="text-indigo-400" />
+          <div className="space-y-0.5">
+            {allBacklog.map(item => (
+              <Link
+                key={item.id}
+                href={`/items/${item.id}`}
+                className="flex items-center gap-2.5 py-2 px-2.5 -mx-2.5 rounded-lg hover:bg-zinc-800/50 transition-colors group"
+              >
+                <span className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded border font-medium ${getPriorityStyle(item.priority)}`}>
+                  {item.priority === 'high' ? '!!!' : item.priority === 'medium' ? '!!' : '!'}
+                </span>
+                <span className="text-sm text-zinc-200 truncate flex-1 group-hover:text-white">{item.title}</span>
+                <span className={`hidden sm:inline text-[10px] px-1.5 py-0.5 rounded border font-medium ${item.assignee === 'jarvis' ? 'text-cyan-400 bg-cyan-400/10 border-cyan-400/20' : item.assignee === 'spencer' ? 'text-orange-400 bg-orange-400/10 border-orange-400/20' : 'text-zinc-500 bg-zinc-800 border-zinc-700'}`}>
+                  {item.assignee || 'unassigned'}
+                </span>
+                <span className={`hidden sm:inline text-[10px] px-1.5 py-0.5 rounded border font-medium ${getProjectStyle(item.project)}`}>
+                  {item.project}
+                </span>
+              </Link>
+            ))}
           </div>
         </div>
       )}
