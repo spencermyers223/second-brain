@@ -113,6 +113,17 @@ export default function Dashboard() {
       setUpdating(false);
     };
 
+    const handleReject = async () => {
+      setUpdating(true);
+      await fetch(`/api/items/${item.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'rejected' }),
+      });
+      onUpdate();
+      setUpdating(false);
+    };
+
     const handleNeedsChanges = async () => {
       if (!showFeedback) {
         setShowFeedback(true);
@@ -197,6 +208,13 @@ export default function Dashboard() {
                 className="px-3 py-1.5 text-xs font-medium bg-orange-500/10 text-orange-400 border border-orange-500/20 rounded-lg hover:bg-orange-500/20 transition-colors disabled:opacity-50"
               >
                 {showFeedback ? '↩ Send Feedback' : '↩ Needs Changes'}
+              </button>
+              <button
+                onClick={handleReject}
+                disabled={updating}
+                className="px-3 py-1.5 text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20 rounded-lg hover:bg-red-500/20 transition-colors disabled:opacity-50"
+              >
+                ✗ Reject
               </button>
               {showFeedback && (
                 <button
