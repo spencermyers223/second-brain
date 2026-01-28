@@ -1,7 +1,7 @@
 export type Category = 'ideas' | 'tasks' | 'research' | 'content-drafts' | 'shipped' | 'learnings' | 'goals' | 'future-projects';
 export type Priority = 'high' | 'medium' | 'low';
 export type Status = 'backlog' | 'in-progress' | 'review-needed' | 'done' | 'rejected';
-export type Project = 'xthread' | 'nomad-research' | 'general';
+export type Project = 'xthread' | 'nomad-research' | 'general' | 'winfirst';
 export type Assignee = 'spencer' | 'jarvis' | 'both';
 
 export interface Attachment {
@@ -26,6 +26,7 @@ export interface BrainItem {
   position: number;
   created_at: string;
   updated_at: string;
+  archived_at: string | null;
 }
 
 export interface BrainActivity {
@@ -63,6 +64,7 @@ export const STATUSES: { value: Status; label: string }[] = [
 
 export const PROJECTS: { value: Project; label: string; color: string }[] = [
   { value: 'xthread', label: 'xthread', color: 'text-blue-400 bg-blue-400/10 border-blue-400/20' },
+  { value: 'winfirst', label: 'winfirst', color: 'text-green-400 bg-green-400/10 border-green-400/20' },
   { value: 'nomad-research', label: 'nomad-research', color: 'text-purple-400 bg-purple-400/10 border-purple-400/20' },
   { value: 'general', label: 'general', color: 'text-gray-400 bg-gray-400/10 border-gray-400/20' },
 ];
