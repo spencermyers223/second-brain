@@ -1,13 +1,13 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { BrainItem, getPriorityStyle, getProjectStyle } from '@/lib/types';
+import { BrainItem, getProjectStyle, Project, PROJECTS } from '@/lib/types';
 import Link from 'next/link';
-import AttachmentGallery from '@/components/AttachmentGallery';
 
 export default function Dashboard() {
   const [items, setItems] = useState<BrainItem[]>([]);
   const [showArchive, setShowArchive] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<Project | 'all'>('all');
 
   const load = useCallback(async () => {
     const res = await fetch('/api/items');
@@ -16,28 +16,45 @@ export default function Dashboard() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Filter by project
+  const projectItems = selectedProject === 'all' 
+    ? items 
+    : items.filter(i => i.project === selectedProject);
+
   // Filter out archived items for main view
-  const activeItems = items.filter(i => !i.archived_at);
-  const archivedItems = items.filter(i => i.archived_at);
+  const activeItems = projectItems.filter(i => !i.archived_at);
+  const archivedItems = projectItems.filter(i => i.archived_at);
   
-  // Core sections - simple and clear
+  // NEEDS TESTING: Recently completed by Jarvis (last 7 days)
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const needsTesting = activeItems.filter(i => 
+    i.assignee === 'jarvis' && 
+    i.status === 'done' &&
+    new Date(i.updated_at) > sevenDaysAgo
+  ).sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+  
+  // Review needed
   const needsReview = activeItems.filter(i => i.status === 'review-needed');
+  
+  // Spencer's tasks
   const spencerTasks = activeItems.filter(i => 
     (i.assignee === 'spencer' || i.assignee === 'both') && 
     ['backlog', 'in-progress'].includes(i.status) &&
     i.category !== 'goals' && i.category !== 'ideas'
   ).sort((a, b) => {
-    // in-progress first, then by priority
     if (a.status !== b.status) return a.status === 'in-progress' ? -1 : 1;
     const po = { high: 0, medium: 1, low: 2 };
     return po[a.priority] - po[b.priority];
   });
   
+  // Jarvis working now
   const jarvisWorking = activeItems.filter(i => 
     i.assignee === 'jarvis' && 
     i.status === 'in-progress'
   );
   
+  // Jarvis queue
   const jarvisQueue = activeItems.filter(i => 
     i.assignee === 'jarvis' && 
     i.status === 'backlog' &&
@@ -47,368 +64,301 @@ export default function Dashboard() {
     return po[a.priority] - po[b.priority];
   });
   
+  // Ideas
   const ideas = activeItems.filter(i => 
     (i.category === 'ideas' || i.category === 'future-projects') && 
     !['done', 'rejected'].includes(i.status)
   );
   
+  // Goals
   const goals = activeItems.filter(i => 
     i.category === 'goals' && 
     !['done', 'rejected'].includes(i.status)
   );
 
   const ReviewCard = ({ item, onUpdate }: { item: BrainItem; onUpdate: () => void }) => {
-    const [expanded, setExpanded] = useState(false);
-    const [updating, setUpdating] = useState(false);
-    const [showFeedback, setShowFeedback] = useState(false);
-    const [feedback, setFeedback] = useState('');
-
+    const [isApproving, setIsApproving] = useState(false);
+    
     const handleApprove = async () => {
-      setUpdating(true);
-      await fetch(`/api/items/${item.id}`, {
-        method: 'PUT',
+      setIsApproving(true);
+      await fetch(`/api/items/${item.id}/status`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'done', archived_at: new Date().toISOString() }),
+        body: JSON.stringify({ status: 'done' })
       });
       onUpdate();
+      setIsApproving(false);
     };
-
-    const handleReject = async () => {
-      setUpdating(true);
-      await fetch(`/api/items/${item.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'rejected', archived_at: new Date().toISOString() }),
-      });
-      onUpdate();
-    };
-
-    const handleNeedsChanges = async () => {
-      if (!showFeedback) {
-        setShowFeedback(true);
-        return;
-      }
-      if (!feedback.trim()) return;
-      setUpdating(true);
-      const existingNotes = item.notes || '';
-      const feedbackBlock = `\n\n--- FEEDBACK ---\n${feedback.trim()}`;
-      await fetch(`/api/items/${item.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          status: 'in-progress',
-          notes: existingNotes + feedbackBlock,
-        }),
-      });
-      setFeedback('');
-      setShowFeedback(false);
-      onUpdate();
-    };
-
+    
     return (
-      <div className="border border-zinc-800 rounded-lg p-3 space-y-2 hover:border-amber-500/30 transition-colors">
-        <div className="flex items-start justify-between gap-2">
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="flex items-start gap-2 text-left flex-1 min-w-0"
-          >
-            <span className="text-amber-400 mt-0.5 text-xs shrink-0">{expanded ? '▼' : '▶'}</span>
-            <div className="min-w-0">
-              <p className="text-sm text-zinc-200 font-medium">{item.title}</p>
-              {item.description && !expanded && (
-                <p className="text-xs text-zinc-500 truncate mt-0.5">{item.description}</p>
-              )}
+      <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-lg p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Link href={`/items/${item.id}`} className="font-medium hover:text-yellow-400 transition-colors">
+                {item.title}
+              </Link>
+              <span className={`text-xs px-2 py-0.5 rounded-full border ${getProjectStyle(item.project)}`}>
+                {item.project}
+              </span>
             </div>
-          </button>
-          <div className="flex gap-1.5 shrink-0">
-            <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium ${getProjectStyle(item.project)}`}>
-              {item.project}
-            </span>
-          </div>
-        </div>
-        {expanded && (
-          <div className="space-y-3 pl-5">
             {item.description && (
-              <p className="text-xs text-zinc-400">{item.description}</p>
+              <p className="text-sm text-zinc-400 mt-1 line-clamp-2">{item.description}</p>
             )}
             {item.notes && (
-              <div className="bg-zinc-800/50 rounded-lg p-3 text-sm text-zinc-300 whitespace-pre-wrap max-h-[400px] overflow-y-auto">
-                {item.notes}
+              <div className="mt-2 text-sm text-zinc-300 bg-zinc-800/50 rounded p-2 whitespace-pre-wrap max-h-32 overflow-y-auto">
+                {item.notes.substring(0, 500)}{item.notes.length > 500 ? '...' : ''}
               </div>
             )}
-            {item.attachments && item.attachments.length > 0 && (
-              <AttachmentGallery attachments={item.attachments} />
-            )}
-            {!item.notes && (!item.attachments || item.attachments.length === 0) && (
-              <p className="text-xs text-zinc-600 italic">No content attached.</p>
-            )}
-            {showFeedback && (
-              <textarea
-                value={feedback}
-                onChange={e => setFeedback(e.target.value)}
-                placeholder="What needs to change?"
-                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg p-2.5 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-amber-500/50 resize-none"
-                rows={3}
-                autoFocus
-              />
-            )}
-            <div className="flex gap-2 pt-1 flex-wrap">
-              <button
-                onClick={handleApprove}
-                disabled={updating}
-                className="px-3 py-1.5 text-xs font-medium bg-green-500/10 text-green-400 border border-green-500/20 rounded-lg hover:bg-green-500/20 transition-colors disabled:opacity-50"
-              >
-                ✓ Approve
-              </button>
-              <button
-                onClick={handleNeedsChanges}
-                disabled={updating || (showFeedback && !feedback.trim())}
-                className="px-3 py-1.5 text-xs font-medium bg-orange-500/10 text-orange-400 border border-orange-500/20 rounded-lg hover:bg-orange-500/20 transition-colors disabled:opacity-50"
-              >
-                {showFeedback ? '↩ Send' : '↩ Changes'}
-              </button>
-              <button
-                onClick={handleReject}
-                disabled={updating}
-                className="px-3 py-1.5 text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20 rounded-lg hover:bg-red-500/20 transition-colors disabled:opacity-50"
-              >
-                ✗ Reject
-              </button>
-              {showFeedback && (
-                <button
-                  onClick={() => { setShowFeedback(false); setFeedback(''); }}
-                  className="px-3 py-1.5 text-xs font-medium text-zinc-500 hover:text-zinc-300"
-                >
-                  Cancel
-                </button>
-              )}
-            </div>
           </div>
-        )}
+          <button
+            onClick={handleApprove}
+            disabled={isApproving}
+            className="px-3 py-1.5 bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white text-sm rounded-lg transition-colors flex-shrink-0"
+          >
+            {isApproving ? '...' : '✓ Approve'}
+          </button>
+        </div>
       </div>
     );
   };
 
-  const TaskRow = ({ item }: { item: BrainItem }) => (
-    <Link
-      href={`/items/${item.id}`}
-      className="flex items-center gap-2.5 py-2 px-2.5 -mx-2.5 rounded-lg hover:bg-zinc-800/50 transition-colors group"
-    >
-      {item.status === 'in-progress' && (
-        <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse shrink-0" />
-      )}
-      <span className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded border font-medium ${getPriorityStyle(item.priority)}`}>
-        {item.priority === 'high' ? '!!!' : item.priority === 'medium' ? '!!' : '!'}
-      </span>
-      <span className="text-sm text-zinc-300 truncate flex-1 group-hover:text-white">{item.title}</span>
-      <span className={`hidden sm:inline text-[10px] px-1.5 py-0.5 rounded border font-medium ${getProjectStyle(item.project)}`}>
-        {item.project}
-      </span>
+  const TestingCard = ({ item }: { item: BrainItem }) => {
+    const completedDate = new Date(item.updated_at).toLocaleDateString();
+    
+    return (
+      <div className="bg-blue-500/5 border border-blue-500/20 rounded-lg p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-medium">{item.title}</span>
+              <span className={`text-xs px-2 py-0.5 rounded-full border ${getProjectStyle(item.project)}`}>
+                {item.project}
+              </span>
+              <span className="text-xs text-zinc-500">
+                completed {completedDate}
+              </span>
+            </div>
+            {item.description && (
+              <p className="text-sm text-zinc-400 mt-1">{item.description}</p>
+            )}
+          </div>
+          <Link 
+            href={`/items/${item.id}`}
+            className="px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-white text-sm rounded-lg transition-colors flex-shrink-0"
+          >
+            Details
+          </Link>
+        </div>
+      </div>
+    );
+  };
+
+  const TaskCard = ({ item }: { item: BrainItem }) => (
+    <Link href={`/items/${item.id}`} className="block group">
+      <div className="flex items-center gap-3 p-3 rounded-lg hover:bg-zinc-800/50 transition-colors">
+        <div className={`w-2 h-2 rounded-full ${
+          item.status === 'in-progress' ? 'bg-blue-400 animate-pulse' : 
+          item.priority === 'high' ? 'bg-red-400' : 
+          item.priority === 'medium' ? 'bg-yellow-400' : 'bg-zinc-500'
+        }`} />
+        <span className="flex-1 truncate group-hover:text-white transition-colors">{item.title}</span>
+        <span className={`text-xs px-2 py-0.5 rounded-full border ${getProjectStyle(item.project)}`}>
+          {item.project}
+        </span>
+        {item.status === 'in-progress' && (
+          <span className="text-xs text-blue-400">working</span>
+        )}
+      </div>
     </Link>
   );
 
-  const Section = ({ 
-    emoji, 
-    title, 
-    count, 
-    color = 'text-zinc-400',
-    border = 'border-zinc-800',
-    children,
-    empty = 'Nothing here'
-  }: { 
-    emoji: string; 
-    title: string; 
-    count: number; 
-    color?: string;
-    border?: string;
-    children: React.ReactNode;
-    empty?: string;
-  }) => (
-    <div className={`bg-zinc-900 border ${border} rounded-xl p-4`}>
-      <div className="flex items-center justify-between mb-3">
-        <h2 className={`text-sm font-semibold ${color}`}>{emoji} {title}</h2>
-        <span className="text-xs text-zinc-600 bg-zinc-800 px-2 py-0.5 rounded-full">{count}</span>
+  const IdeaCard = ({ item }: { item: BrainItem }) => (
+    <Link href={`/items/${item.id}`} className="block group">
+      <div className="p-3 rounded-lg bg-zinc-800/30 hover:bg-zinc-800/50 transition-colors">
+        <div className="flex items-center gap-2">
+          <span className="truncate group-hover:text-white transition-colors">{item.title}</span>
+          <span className={`text-xs px-2 py-0.5 rounded-full border ${getProjectStyle(item.project)}`}>
+            {item.project}
+          </span>
+        </div>
+        {item.description && (
+          <p className="text-sm text-zinc-500 mt-1 line-clamp-1">{item.description}</p>
+        )}
       </div>
-      {count === 0 ? (
-        <p className="text-sm text-zinc-700 italic py-2">{empty}</p>
-      ) : children}
-    </div>
+    </Link>
   );
 
   return (
-    <div className="p-5 md:p-8 max-w-5xl mx-auto space-y-5">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
+    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+      <div className="max-w-5xl mx-auto p-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Second Brain</h1>
-          <p className="text-sm text-zinc-500 mt-0.5">
-            {activeItems.length} active
-            {archivedItems.length > 0 && (
-              <button 
-                onClick={() => setShowArchive(!showArchive)}
-                className="ml-2 text-zinc-600 hover:text-zinc-400 transition-colors"
-              >
-                · {archivedItems.length} archived {showArchive ? '▼' : '▶'}
-              </button>
-            )}
-          </p>
+          <div className="flex items-center gap-3">
+            <Link href="/items/new" className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-medium transition-colors">
+              + Add Item
+            </Link>
+            <Link href="/board" className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-sm transition-colors">
+              Board View
+            </Link>
+          </div>
         </div>
-        <Link href="/items/new" className="px-4 py-2 bg-white text-black text-sm font-medium rounded-lg hover:bg-zinc-200 transition-colors">
-          + Add
-        </Link>
-      </div>
 
-      {/* NEEDS YOUR REVIEW - Most prominent */}
-      <Section 
-        emoji="👀" 
-        title="Needs Your Review" 
-        count={needsReview.length}
-        color="text-amber-400"
-        border="border-amber-500/30"
-        empty="All clear — nothing to review"
-      >
-        <div className="space-y-2">
-          {needsReview.map(item => (
-            <ReviewCard key={item.id} item={item} onUpdate={load} />
+        {/* Project Tabs */}
+        <div className="flex gap-2 mb-6 border-b border-zinc-800 pb-4">
+          <button
+            onClick={() => setSelectedProject('all')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              selectedProject === 'all' 
+                ? 'bg-zinc-700 text-white' 
+                : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+            }`}
+          >
+            All Projects
+          </button>
+          {PROJECTS.filter(p => p.value !== 'general' && p.value !== 'nomad-research').map(project => (
+            <button
+              key={project.value}
+              onClick={() => setSelectedProject(project.value)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                selectedProject === project.value 
+                  ? `${project.color.replace('text-', 'bg-').replace('/10', '/20')} ${project.color.split(' ')[0]}` 
+                  : 'text-zinc-400 hover:text-white hover:bg-zinc-800'
+              }`}
+            >
+              {project.label}
+            </button>
           ))}
         </div>
-      </Section>
 
-      {/* Two column: Your Tasks + Jarvis Status */}
-      <div className="grid md:grid-cols-2 gap-4">
-        {/* Spencer's Tasks */}
-        <Section 
-          emoji="📋" 
-          title="Your Tasks" 
-          count={spencerTasks.length}
-          color="text-white"
-          empty="Nothing on your plate!"
-        >
-          <div className="space-y-0.5">
-            {spencerTasks.map(item => <TaskRow key={item.id} item={item} />)}
-          </div>
-        </Section>
-
-        {/* Jarvis Working + Queue */}
-        <div className="space-y-4">
-          <Section 
-            emoji="🤖" 
-            title="Jarvis Working On" 
-            count={jarvisWorking.length}
-            color="text-blue-400"
-            empty="Picking up next task..."
-          >
-            <div className="space-y-0.5">
-              {jarvisWorking.map(item => <TaskRow key={item.id} item={item} />)}
+        {/* Needs Testing Section */}
+        {needsTesting.length > 0 && (
+          <section className="mb-8">
+            <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+              <span className="text-blue-400">🧪</span> Needs Testing
+              <span className="text-sm font-normal text-zinc-500">
+                ({needsTesting.length} items completed by Jarvis)
+              </span>
+            </h2>
+            <div className="space-y-2">
+              {needsTesting.map(item => (
+                <TestingCard key={item.id} item={item} />
+              ))}
             </div>
-          </Section>
+          </section>
+        )}
 
-          {jarvisQueue.length > 0 && (
-            <Section 
-              emoji="📥" 
-              title="Jarvis Queue" 
-              count={jarvisQueue.length}
-              color="text-zinc-500"
-              empty=""
-            >
-              <div className="space-y-0.5">
-                {jarvisQueue.slice(0, 5).map(item => <TaskRow key={item.id} item={item} />)}
-                {jarvisQueue.length > 5 && (
-                  <Link href="/items?assignee=jarvis&status=backlog" className="block text-xs text-zinc-600 hover:text-zinc-400 pt-2">
-                    +{jarvisQueue.length - 5} more →
-                  </Link>
-                )}
+        {/* Needs Review */}
+        {needsReview.length > 0 && (
+          <section className="mb-8">
+            <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+              <span className="text-yellow-400">⚡</span> Needs Review
+              <span className="text-sm font-normal text-zinc-500">({needsReview.length})</span>
+            </h2>
+            <div className="space-y-3">
+              {needsReview.map(item => (
+                <ReviewCard key={item.id} item={item} onUpdate={load} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        <div className="grid md:grid-cols-2 gap-8">
+          {/* Jarvis Working On */}
+          <section>
+            <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+              <span className="text-blue-400">🤖</span> Jarvis Working On
+            </h2>
+            {jarvisWorking.length === 0 ? (
+              <p className="text-zinc-500 text-sm">Nothing in progress</p>
+            ) : (
+              <div className="space-y-1">
+                {jarvisWorking.map(item => (
+                  <TaskCard key={item.id} item={item} />
+                ))}
               </div>
-            </Section>
+            )}
+            
+            {jarvisQueue.length > 0 && (
+              <>
+                <h3 className="text-sm font-medium text-zinc-500 mt-4 mb-2">Up Next</h3>
+                <div className="space-y-1">
+                  {jarvisQueue.slice(0, 5).map(item => (
+                    <TaskCard key={item.id} item={item} />
+                  ))}
+                  {jarvisQueue.length > 5 && (
+                    <p className="text-xs text-zinc-600 pl-3">+{jarvisQueue.length - 5} more</p>
+                  )}
+                </div>
+              </>
+            )}
+          </section>
+
+          {/* Spencer's Tasks */}
+          <section>
+            <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+              <span>👤</span> Spencer&apos;s Tasks
+            </h2>
+            {spencerTasks.length === 0 ? (
+              <p className="text-zinc-500 text-sm">All clear!</p>
+            ) : (
+              <div className="space-y-1">
+                {spencerTasks.map(item => (
+                  <TaskCard key={item.id} item={item} />
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+
+        {/* Goals */}
+        {goals.length > 0 && (
+          <section className="mt-8">
+            <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+              <span>🎯</span> Goals
+            </h2>
+            <div className="grid md:grid-cols-2 gap-2">
+              {goals.map(item => (
+                <IdeaCard key={item.id} item={item} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Ideas */}
+        {ideas.length > 0 && (
+          <section className="mt-8">
+            <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+              <span>💡</span> Ideas & Future
+            </h2>
+            <div className="grid md:grid-cols-2 gap-2">
+              {ideas.map(item => (
+                <IdeaCard key={item.id} item={item} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Archive Toggle */}
+        <div className="mt-12 border-t border-zinc-800 pt-6">
+          <button
+            onClick={() => setShowArchive(!showArchive)}
+            className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
+          >
+            {showArchive ? '▼' : '▶'} Archive ({archivedItems.length} items)
+          </button>
+          {showArchive && archivedItems.length > 0 && (
+            <div className="mt-4 space-y-1 opacity-60">
+              {archivedItems.slice(0, 20).map(item => (
+                <Link key={item.id} href={`/items/${item.id}`} className="block text-sm text-zinc-500 hover:text-zinc-300 py-1">
+                  {item.title}
+                </Link>
+              ))}
+            </div>
           )}
         </div>
       </div>
-
-      {/* Ideas + Goals row */}
-      {(ideas.length > 0 || goals.length > 0) && (
-        <div className="grid md:grid-cols-2 gap-4">
-          {ideas.length > 0 && (
-            <Section 
-              emoji="💡" 
-              title="Ideas & Future" 
-              count={ideas.length}
-              color="text-yellow-400"
-              empty=""
-            >
-              <div className="space-y-0.5">
-                {ideas.slice(0, 5).map(item => (
-                  <Link
-                    key={item.id}
-                    href={`/items/${item.id}`}
-                    className="flex items-center gap-2 py-1.5 text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
-                  >
-                    <span className="text-zinc-600">•</span>
-                    <span className="truncate">{item.title}</span>
-                  </Link>
-                ))}
-                {ideas.length > 5 && (
-                  <span className="block text-xs text-zinc-600 pt-1">+{ideas.length - 5} more</span>
-                )}
-              </div>
-            </Section>
-          )}
-          
-          {goals.length > 0 && (
-            <Section 
-              emoji="🎯" 
-              title="Goals" 
-              count={goals.length}
-              color="text-emerald-400"
-              empty=""
-            >
-              <div className="space-y-0.5">
-                {goals.map(item => (
-                  <Link
-                    key={item.id}
-                    href={`/items/${item.id}`}
-                    className="flex items-center gap-2 py-1.5 group"
-                  >
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium ${getProjectStyle(item.project)}`}>
-                      {item.project}
-                    </span>
-                    <span className="text-sm text-zinc-300 group-hover:text-white truncate">{item.title}</span>
-                  </Link>
-                ))}
-              </div>
-            </Section>
-          )}
-        </div>
-      )}
-
-      {/* Archive (collapsible) */}
-      {showArchive && archivedItems.length > 0 && (
-        <Section 
-          emoji="📦" 
-          title="Archive" 
-          count={archivedItems.length}
-          color="text-zinc-600"
-          empty=""
-        >
-          <div className="space-y-0.5 max-h-64 overflow-y-auto">
-            {archivedItems
-              .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
-              .slice(0, 20)
-              .map(item => (
-                <Link
-                  key={item.id}
-                  href={`/items/${item.id}`}
-                  className="flex items-center gap-2 py-1.5 text-sm text-zinc-600 hover:text-zinc-400 transition-colors"
-                >
-                  <span>{item.status === 'done' ? '✓' : '✗'}</span>
-                  <span className="truncate line-through">{item.title}</span>
-                </Link>
-              ))}
-            {archivedItems.length > 20 && (
-              <span className="block text-xs text-zinc-700 pt-1">+{archivedItems.length - 20} more in archive</span>
-            )}
-          </div>
-        </Section>
-      )}
     </div>
   );
 }
