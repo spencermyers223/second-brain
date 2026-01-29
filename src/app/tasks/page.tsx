@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Task, Project, Assignee, TaskStatus, Priority, STATUS_COLUMNS, PRIORITY_STYLES, PROJECT_COLORS, AUTONOMY_LABELS } from '@/lib/types';
 
-export default function TasksPage() {
+function TasksContent() {
   const searchParams = useSearchParams();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -134,6 +134,14 @@ export default function TasksPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function TasksPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-zinc-500">Loading...</div>}>
+      <TasksContent />
+    </Suspense>
   );
 }
 
