@@ -1,78 +1,96 @@
-export type Category = 'ideas' | 'tasks' | 'research' | 'content-drafts' | 'shipped' | 'learnings' | 'goals' | 'future-projects';
-export type Priority = 'high' | 'medium' | 'low';
-export type Status = 'backlog' | 'in-progress' | 'review-needed' | 'done' | 'rejected';
-export type Project = 'xthread' | 'nomad-research' | 'general' | 'winfirst';
-export type Assignee = 'spencer' | 'jarvis' | 'both';
+export type Assignee = 'spencer' | 'clawdbot';
+export type Priority = 'P1' | 'P2' | 'P3';
+export type TaskStatus = 'backlog' | 'in-progress' | 'needs-review' | 'done';
+export type Autonomy = 'full' | 'do-then-review' | 'discuss-first';
+export type ChecklistType = 'short-term' | 'long-term';
+export type ProjectStatus = 'active' | 'paused' | 'completed';
 
-export interface Attachment {
-  url: string;
-  name: string;
-  type: string;
-  size: number;
-}
-
-export interface BrainItem {
+export interface Project {
   id: string;
-  title: string;
+  name: string;
   description: string | null;
-  category: Category;
-  priority: Priority;
-  status: Status;
-  project: Project;
-  notes: string | null;
-  assignee: Assignee;
-  tags: string[];
-  attachments: Attachment[];
+  status: ProjectStatus;
+  github_url: string | null;
+  live_url: string | null;
+  vercel_url: string | null;
+  color: string;
   position: number;
   created_at: string;
   updated_at: string;
-  archived_at: string | null;
 }
 
-export interface BrainActivity {
+export interface Task {
   id: string;
-  item_id: string;
-  action: string;
-  details: Record<string, unknown> | null;
+  project_id: string | null;
+  title: string;
+  description: string | null;
+  assignee: Assignee;
+  priority: Priority;
+  status: TaskStatus;
+  autonomy: Autonomy;
+  estimated_minutes: number | null;
+  due_date: string | null;
+  position: number;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
+}
+
+export interface ChecklistItem {
+  id: string;
+  project_id: string | null;
+  title: string;
+  type: ChecklistType;
+  due_date: string | null;
+  completed: boolean;
+  completed_at: string | null;
+  position: number;
   created_at: string;
 }
 
-export const CATEGORIES: { value: Category; label: string }[] = [
-  { value: 'ideas', label: 'Ideas' },
-  { value: 'tasks', label: 'Tasks' },
-  { value: 'research', label: 'Research' },
-  { value: 'content-drafts', label: 'Content Drafts' },
-  { value: 'shipped', label: 'Shipped' },
-  { value: 'learnings', label: 'Learnings' },
-  { value: 'goals', label: 'Goals' },
-  { value: 'future-projects', label: 'Future Projects' },
-];
+export interface ActivityLog {
+  id: string;
+  project_id: string | null;
+  actor: Assignee;
+  action: string;
+  target_type: string | null;
+  target_id: string | null;
+  target_title: string | null;
+  details: string | null;
+  created_at: string;
+}
 
-export const PRIORITIES: { value: Priority; label: string; color: string }[] = [
-  { value: 'high', label: 'High', color: 'text-red-400 bg-red-400/10 border-red-400/20' },
-  { value: 'medium', label: 'Medium', color: 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20' },
-  { value: 'low', label: 'Low', color: 'text-green-400 bg-green-400/10 border-green-400/20' },
-];
+export interface QuickCapture {
+  id: string;
+  content: string;
+  project_id: string | null;
+  processed: boolean;
+  created_at: string;
+}
 
-export const STATUSES: { value: Status; label: string }[] = [
+// Styling helpers
+export const PRIORITY_STYLES: Record<Priority, string> = {
+  'P1': 'bg-red-500/20 text-red-400 border-red-500/30',
+  'P2': 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+  'P3': 'bg-zinc-500/20 text-zinc-400 border-zinc-500/30',
+};
+
+export const PROJECT_COLORS: Record<string, string> = {
+  'emerald': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+  'purple': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+  'orange': 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+  'blue': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+};
+
+export const STATUS_COLUMNS: { value: TaskStatus; label: string }[] = [
   { value: 'backlog', label: 'Backlog' },
   { value: 'in-progress', label: 'In Progress' },
-  { value: 'review-needed', label: 'Review Needed' },
+  { value: 'needs-review', label: 'Needs Review' },
   { value: 'done', label: 'Done' },
-  { value: 'rejected', label: 'Rejected' },
 ];
 
-export const PROJECTS: { value: Project; label: string; color: string }[] = [
-  { value: 'xthread', label: 'xthread', color: 'text-blue-400 bg-blue-400/10 border-blue-400/20' },
-  { value: 'winfirst', label: 'winfirst', color: 'text-green-400 bg-green-400/10 border-green-400/20' },
-  { value: 'nomad-research', label: 'nomad-research', color: 'text-purple-400 bg-purple-400/10 border-purple-400/20' },
-  { value: 'general', label: 'general', color: 'text-gray-400 bg-gray-400/10 border-gray-400/20' },
-];
-
-export function getPriorityStyle(p: Priority) {
-  return PRIORITIES.find(x => x.value === p)!.color;
-}
-
-export function getProjectStyle(p: Project) {
-  return PROJECTS.find(x => x.value === p)!.color;
-}
+export const AUTONOMY_LABELS: Record<Autonomy, string> = {
+  'full': '🟢 Full Autonomy',
+  'do-then-review': '🟡 Do Then Review',
+  'discuss-first': '🔴 Discuss First',
+};
