@@ -2,12 +2,13 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { Project, Task, ActivityLog, TaskComment, PROJECT_COLORS, PRIORITY_STYLES } from '@/lib/types';
+import { Project, Task, ActivityLog, TaskComment, DailySummary, PROJECT_COLORS, PRIORITY_STYLES, CATEGORY_STYLES } from '@/lib/types';
 
 export default function Dashboard() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [activity, setActivity] = useState<ActivityLog[]>([]);
+  const [dailySummary, setDailySummary] = useState<DailySummary | null>(null);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(() => {
@@ -15,10 +16,14 @@ export default function Dashboard() {
       fetch('/api/projects').then(r => r.json()),
       fetch('/api/tasks').then(r => r.json()),
       fetch('/api/activity?limit=10').then(r => r.json()),
-    ]).then(([p, t, a]) => {
+      fetch('/api/daily-summaries').then(r => r.json()),
+    ]).then(([p, t, a, ds]) => {
       setProjects(p);
       setTasks(t);
       setActivity(a);
+      // Get today's summary (first non-archived one)
+      const today = Array.isArray(ds) ? ds.find((s: DailySummary) => !s.archived) : null;
+      setDailySummary(today);
       setLoading(false);
     });
   }, []);
@@ -82,6 +87,27 @@ export default function Dashboard() {
           value={tasks.filter(t => t.status === 'done' && isThisWeek(t.completed_at)).length}
         />
       </div>
+
+      {/* Today's Progress */}
+      {dailySummary && dailySummary.items.length > 0 && (
+        <section className="bg-gradient-to-r from-emerald-500/10 to-blue-500/10 border border-emerald-500/20 rounded-xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-emerald-400">🚀 Today&apos;s Progress</h2>
+            <span className="text-xs text-zinc-500">{dailySummary.items.length} items shipped</span>
+          </div>
+          <div className="space-y-2">
+            {dailySummary.items.map((item, idx) => (
+              <div key={idx} className="flex items-start gap-3 p-2 rounded-lg bg-zinc-900/50">
+                <span className={`text-xs px-1.5 py-0.5 rounded border shrink-0 ${CATEGORY_STYLES[item.category]}`}>
+                  {item.category}
+                </span>
+                <span className="text-sm text-zinc-300 flex-1">{item.text}</span>
+                <span className="text-xs text-zinc-600 shrink-0">{item.time}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Projects */}
       <section>

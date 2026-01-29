@@ -103,6 +103,31 @@ export const AUTONOMY_LABELS: Record<Autonomy, string> = {
   'discuss-first': '🔴 Discuss First',
 };
 
+// Daily Summaries
+export type SummaryCategory = 'feature' | 'fix' | 'docs' | 'other';
+
+export interface DailySummaryItem {
+  text: string;
+  time: string;
+  category: SummaryCategory;
+}
+
+export interface DailySummary {
+  id: string;
+  date: string;
+  items: DailySummaryItem[];
+  archived: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export const CATEGORY_STYLES: Record<SummaryCategory, string> = {
+  'feature': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+  'fix': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+  'docs': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+  'other': 'bg-zinc-500/20 text-zinc-400 border-zinc-500/30',
+};
+
 // Tweet Drafts
 export type TweetDraftStatus = 'draft' | 'pending-review' | 'approved' | 'rejected' | 'posted';
 
