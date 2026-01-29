@@ -145,6 +145,13 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
         </div>
       )}
 
+      {item.notes && (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
+          <h3 className="text-sm font-medium text-zinc-400 mb-3">📝 Notes / Instructions</h3>
+          <div className="text-sm text-zinc-300 whitespace-pre-wrap leading-relaxed">{item.notes}</div>
+        </div>
+      )}
+
       {item.tags.length > 0 && (
         <div className="flex gap-2 flex-wrap">
           {item.tags.map((t) => (
