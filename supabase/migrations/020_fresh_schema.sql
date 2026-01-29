@@ -1,11 +1,34 @@
--- Fresh Project Hub Schema
--- Drop old tables if they exist
+-- Fresh Project Hub Schema - Complete Reset
+
+-- Drop all existing objects
+DROP TRIGGER IF EXISTS task_change_trigger ON tasks;
+DROP TRIGGER IF EXISTS update_tasks_updated_at ON tasks;
+DROP TRIGGER IF EXISTS update_projects_updated_at ON projects;
+DROP FUNCTION IF EXISTS log_task_change();
+DROP FUNCTION IF EXISTS update_updated_at();
+
+DROP INDEX IF EXISTS idx_captures_processed;
+DROP INDEX IF EXISTS idx_activity_created;
+DROP INDEX IF EXISTS idx_activity_project;
+DROP INDEX IF EXISTS idx_checklist_type;
+DROP INDEX IF EXISTS idx_checklist_project;
+DROP INDEX IF EXISTS idx_tasks_status;
+DROP INDEX IF EXISTS idx_tasks_assignee;
+DROP INDEX IF EXISTS idx_tasks_project;
+
+DROP TABLE IF EXISTS quick_captures CASCADE;
+DROP TABLE IF EXISTS activity_log CASCADE;
+DROP TABLE IF EXISTS checklist_items CASCADE;
+DROP TABLE IF EXISTS tasks CASCADE;
+DROP TABLE IF EXISTS projects CASCADE;
 DROP TABLE IF EXISTS brain_items CASCADE;
+DROP TABLE IF EXISTS brain_activity CASCADE;
+DROP TABLE IF EXISTS brain_attachments CASCADE;
 
 -- =============================================
 -- PROJECTS
 -- =============================================
-CREATE TABLE IF NOT EXISTS projects (
+CREATE TABLE projects (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   description TEXT,
@@ -23,13 +46,12 @@ CREATE TABLE IF NOT EXISTS projects (
 INSERT INTO projects (id, name, description, github_url, live_url, color, position) VALUES
   ('xthread', 'xthread', 'AI content assistant for X', 'https://github.com/spencermyers223/threadsmith', 'https://xthread.io', 'emerald', 0),
   ('nomad-research', 'Nomad Research', 'Crypto research community', 'https://github.com/spencermyers223/nomad-website', 'https://nomadresearch.io', 'purple', 1),
-  ('winfirst', 'WinFirst', 'Habit tracking app with app blocking', 'https://github.com/spencermyers223/winfirst', NULL, 'orange', 2)
-ON CONFLICT (id) DO NOTHING;
+  ('winfirst', 'WinFirst', 'Habit tracking app with app blocking', 'https://github.com/spencermyers223/winfirst', NULL, 'orange', 2);
 
 -- =============================================
 -- TASKS
 -- =============================================
-CREATE TABLE IF NOT EXISTS tasks (
+CREATE TABLE tasks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id TEXT REFERENCES projects(id) ON DELETE CASCADE,
   
@@ -57,7 +79,7 @@ CREATE INDEX idx_tasks_status ON tasks(status);
 -- =============================================
 -- CHECKLIST ITEMS
 -- =============================================
-CREATE TABLE IF NOT EXISTS checklist_items (
+CREATE TABLE checklist_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id TEXT REFERENCES projects(id) ON DELETE CASCADE,
   
@@ -78,13 +100,13 @@ CREATE INDEX idx_checklist_type ON checklist_items(type);
 -- =============================================
 -- ACTIVITY LOG
 -- =============================================
-CREATE TABLE IF NOT EXISTS activity_log (
+CREATE TABLE activity_log (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id TEXT REFERENCES projects(id) ON DELETE SET NULL,
   
   actor TEXT NOT NULL CHECK (actor IN ('spencer', 'clawdbot')),
   action TEXT NOT NULL,
-  target_type TEXT, -- 'task', 'checklist', 'project', etc.
+  target_type TEXT,
   target_id TEXT,
   target_title TEXT,
   details TEXT,
@@ -98,7 +120,7 @@ CREATE INDEX idx_activity_created ON activity_log(created_at DESC);
 -- =============================================
 -- QUICK CAPTURES (Inbox)
 -- =============================================
-CREATE TABLE IF NOT EXISTS quick_captures (
+CREATE TABLE quick_captures (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   content TEXT NOT NULL,
   project_id TEXT REFERENCES projects(id) ON DELETE SET NULL,
