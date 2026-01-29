@@ -8,7 +8,8 @@ export default function Dashboard() {
   const [items, setItems] = useState<BrainItem[]>([]);
   const [showArchive, setShowArchive] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | 'all'>('all');
-  const [showOtherSections, setShowOtherSections] = useState(false);
+  // Auto-expand if Spencer has tasks
+  const [showOtherSections, setShowOtherSections] = useState(true);
 
   const load = useCallback(async () => {
     const res = await fetch('/api/items');
