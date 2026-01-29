@@ -264,6 +264,17 @@ function ReviewCard({
     onComment(); // Refresh dashboard
   };
 
+  const handleApprove = async () => {
+    setSending(true);
+    await fetch(`/api/tasks/${task.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'done' }),
+    });
+    setSending(false);
+    onComment(); // Refresh dashboard
+  };
+
   return (
     <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
       <div className="flex items-start gap-3 cursor-pointer" onClick={handleExpand}>
@@ -312,26 +323,34 @@ function ReviewCard({
             )}
           </div>
 
+          {/* Actions */}
+          <div className="flex gap-2 mb-3">
+            <button
+              onClick={handleApprove}
+              disabled={sending}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 rounded-lg text-sm font-medium transition-colors"
+            >
+              ✓ Approve
+            </button>
+          </div>
+
           {/* Add Comment */}
           <div className="flex gap-2">
             <input
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
-              placeholder="Add feedback or request changes..."
+              placeholder="Request changes..."
               className="flex-1 px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm"
               onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSubmit()}
             />
             <button
               onClick={handleSubmit}
               disabled={sending || !newComment.trim()}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-lg text-sm font-medium transition-colors"
+              className="px-4 py-2 bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 rounded-lg text-sm font-medium transition-colors"
             >
-              {sending ? '...' : 'Send'}
+              Send Back
             </button>
           </div>
-          <p className="text-xs text-zinc-500 mt-2">
-            Your comment will send this back to ClawdBot for revision
-          </p>
         </div>
       )}
     </div>
