@@ -62,10 +62,13 @@ export default function Dashboard() {
     ...reviewNeeded.map(i => ({ ...i, _queueType: 'review' as const })),
     ...blockingTasks.filter(i => !reviewNeeded.find(r => r.id === i.id))
       .map(i => ({ ...i, _queueType: 'blocking' as const })),
+    ...hasFeedback.filter(i => !reviewNeeded.find(r => r.id === i.id) && !blockingTasks.find(b => b.id === i.id))
+      .map(i => ({ ...i, _queueType: 'feedback' as const })),
   ].sort((a, b) => {
-    // Blocking items first, then by priority
+    // Blocking items first, then review, then feedback, then by priority
+    const typeOrder = { blocking: 0, review: 1, feedback: 2 };
     if (a._queueType !== b._queueType) {
-      return a._queueType === 'blocking' ? -1 : 1;
+      return typeOrder[a._queueType] - typeOrder[b._queueType];
     }
     const po = { high: 0, medium: 1, low: 2 };
     return po[a.priority] - po[b.priority];
@@ -137,7 +140,7 @@ export default function Dashboard() {
 
   const QueueCard = ({ item, queueType, index, onUpdate }: { 
     item: BrainItem; 
-    queueType: 'review' | 'blocking';
+    queueType: 'review' | 'blocking' | 'feedback';
     index: number;
     onUpdate: () => void;
   }) => {
@@ -171,6 +174,8 @@ export default function Dashboard() {
       <div className={`rounded-xl p-5 ${
         queueType === 'blocking' 
           ? 'bg-red-500/10 border-2 border-red-500/30' 
+          : queueType === 'feedback'
+          ? 'bg-blue-500/10 border-2 border-blue-500/30'
           : 'bg-yellow-500/10 border-2 border-yellow-500/30'
       }`}>
         {/* Header */}
@@ -179,6 +184,8 @@ export default function Dashboard() {
           <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg flex-shrink-0 ${
             queueType === 'blocking' 
               ? 'bg-red-500/20 text-red-400' 
+              : queueType === 'feedback'
+              ? 'bg-blue-500/20 text-blue-400'
               : 'bg-yellow-500/20 text-yellow-400'
           }`}>
             {index + 1}
@@ -190,6 +197,11 @@ export default function Dashboard() {
               {queueType === 'blocking' && (
                 <span className="text-xs px-2 py-0.5 rounded bg-red-500/30 text-red-300 font-medium">
                   🚫 BLOCKING
+                </span>
+              )}
+              {queueType === 'feedback' && (
+                <span className="text-xs px-2 py-0.5 rounded bg-blue-500/30 text-blue-300 font-medium">
+                  💬 HAS FEEDBACK
                 </span>
               )}
               <span className={`text-xs px-2 py-0.5 rounded-full border ${getProjectStyle(item.project)}`}>
@@ -239,6 +251,14 @@ export default function Dashboard() {
                 className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white text-sm font-medium rounded-lg transition-colors"
               >
                 Handle →
+              </Link>
+            )}
+            {queueType === 'feedback' && (
+              <Link 
+                href={`/items/${item.id}`}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                Review Feedback →
               </Link>
             )}
           </div>
