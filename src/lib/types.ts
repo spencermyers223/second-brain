@@ -102,3 +102,29 @@ export const AUTONOMY_LABELS: Record<Autonomy, string> = {
   'do-then-review': '🟡 Do Then Review',
   'discuss-first': '🔴 Discuss First',
 };
+
+// Tweet Drafts
+export type TweetDraftStatus = 'draft' | 'pending-review' | 'approved' | 'rejected' | 'posted';
+
+export interface TweetDraft {
+  id: string;
+  project_id: string | null;
+  content: string;
+  target_account: string;
+  media_urls: string[];
+  status: TweetDraftStatus;
+  created_by: Assignee;
+  feedback: string | null;
+  scheduled_for: string | null;
+  created_at: string;
+  updated_at: string;
+  posted_at: string | null;
+}
+
+export const TWEET_STATUS_STYLES: Record<TweetDraftStatus, string> = {
+  'draft': 'bg-zinc-500/20 text-zinc-400 border-zinc-500/30',
+  'pending-review': 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+  'approved': 'bg-green-500/20 text-green-400 border-green-500/30',
+  'rejected': 'bg-red-500/20 text-red-400 border-red-500/30',
+  'posted': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+};
