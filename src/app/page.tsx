@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { Project, Task, ActivityLog, PROJECT_COLORS, PRIORITY_STYLES } from '@/lib/types';
+import { Project, Task, ActivityLog, TaskComment, PROJECT_COLORS, PRIORITY_STYLES } from '@/lib/types';
 
 export default function Dashboard() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -10,7 +10,7 @@ export default function Dashboard() {
   const [activity, setActivity] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     Promise.all([
       fetch('/api/projects').then(r => r.json()),
       fetch('/api/tasks').then(r => r.json()),
@@ -23,12 +23,16 @@ export default function Dashboard() {
     });
   }, []);
 
+  useEffect(() => { load(); }, [load]);
+
   if (loading) {
     return <div className="p-8 text-zinc-500">Loading...</div>;
   }
 
   const getProjectTasks = (projectId: string) => tasks.filter(t => t.project_id === projectId);
   const getActiveTasks = (projectId: string) => getProjectTasks(projectId).filter(t => t.status !== 'done');
+
+  const needsReview = tasks.filter(t => t.status === 'needs-review');
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-8">
@@ -37,6 +41,23 @@ export default function Dashboard() {
         <h1 className="text-3xl font-bold">Project Hub</h1>
         <p className="text-zinc-500 mt-1">Spencer & ClawdBot</p>
       </div>
+
+      {/* Needs Your Review - Priority Section */}
+      {needsReview.length > 0 && (
+        <section className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-5">
+          <h2 className="text-lg font-semibold text-yellow-400 mb-4">⚡ Needs Your Review ({needsReview.length})</h2>
+          <div className="space-y-3">
+            {needsReview.map((task) => (
+              <ReviewCard 
+                key={task.id} 
+                task={task} 
+                projects={projects}
+                onComment={load}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Quick Stats */}
       <div className="grid grid-cols-4 gap-4">
@@ -190,6 +211,130 @@ function TaskList({ title, tasks, emptyMessage }: { title: string; tasks: Task[]
         )}
       </div>
     </section>
+  );
+}
+
+function ReviewCard({ 
+  task, 
+  projects,
+  onComment 
+}: { 
+  task: Task; 
+  projects: Project[];
+  onComment: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [comments, setComments] = useState<TaskComment[]>([]);
+  const [newComment, setNewComment] = useState('');
+  const [sending, setSending] = useState(false);
+  const [loadingComments, setLoadingComments] = useState(false);
+
+  const project = projects.find(p => p.id === task.project_id);
+  const colorStyle = project ? PROJECT_COLORS[project.color] || PROJECT_COLORS.blue : '';
+
+  const loadComments = async () => {
+    setLoadingComments(true);
+    const res = await fetch(`/api/comments?task_id=${task.id}`);
+    const data = await res.json();
+    setComments(data);
+    setLoadingComments(false);
+  };
+
+  const handleExpand = () => {
+    if (!expanded) {
+      loadComments();
+    }
+    setExpanded(!expanded);
+  };
+
+  const handleSubmit = async () => {
+    if (!newComment.trim()) return;
+    setSending(true);
+    await fetch('/api/comments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        task_id: task.id,
+        author: 'spencer',
+        content: newComment.trim(),
+      }),
+    });
+    setNewComment('');
+    setSending(false);
+    onComment(); // Refresh dashboard
+  };
+
+  return (
+    <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4">
+      <div className="flex items-start gap-3 cursor-pointer" onClick={handleExpand}>
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <span className={`text-xs px-1.5 py-0.5 rounded border ${PRIORITY_STYLES[task.priority]}`}>
+              {task.priority}
+            </span>
+            {project && (
+              <span className={`text-xs px-1.5 py-0.5 rounded border ${colorStyle}`}>
+                {project.name}
+              </span>
+            )}
+            <span className="text-xs text-zinc-500">
+              {task.assignee === 'spencer' ? '👤' : '🤖'} {task.assignee}
+            </span>
+          </div>
+          <h3 className="font-medium">{task.title}</h3>
+          {task.description && (
+            <p className="text-sm text-zinc-400 mt-1">{task.description}</p>
+          )}
+        </div>
+        <span className="text-zinc-500">{expanded ? '▼' : '▶'}</span>
+      </div>
+
+      {expanded && (
+        <div className="mt-4 pt-4 border-t border-zinc-700">
+          {/* Comments */}
+          <div className="space-y-3 mb-4">
+            {loadingComments ? (
+              <p className="text-sm text-zinc-500">Loading comments...</p>
+            ) : comments.length > 0 ? (
+              comments.map((comment) => (
+                <div key={comment.id} className={`p-3 rounded-lg ${comment.author === 'spencer' ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-emerald-500/10 border border-emerald-500/20'}`}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs font-medium">
+                      {comment.author === 'spencer' ? '👤 Spencer' : '🤖 ClawdBot'}
+                    </span>
+                    <span className="text-xs text-zinc-500">{formatTime(comment.created_at)}</span>
+                  </div>
+                  <p className="text-sm whitespace-pre-wrap">{comment.content}</p>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-zinc-500">No comments yet</p>
+            )}
+          </div>
+
+          {/* Add Comment */}
+          <div className="flex gap-2">
+            <input
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              placeholder="Add feedback or request changes..."
+              className="flex-1 px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm"
+              onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSubmit()}
+            />
+            <button
+              onClick={handleSubmit}
+              disabled={sending || !newComment.trim()}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded-lg text-sm font-medium transition-colors"
+            >
+              {sending ? '...' : 'Send'}
+            </button>
+          </div>
+          <p className="text-xs text-zinc-500 mt-2">
+            Your comment will send this back to ClawdBot for revision
+          </p>
+        </div>
+      )}
+    </div>
   );
 }
 

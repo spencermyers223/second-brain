@@ -68,6 +68,14 @@ export interface QuickCapture {
   created_at: string;
 }
 
+export interface TaskComment {
+  id: string;
+  task_id: string;
+  author: Assignee;
+  content: string;
+  created_at: string;
+}
+
 // Styling helpers
 export const PRIORITY_STYLES: Record<Priority, string> = {
   'P1': 'bg-red-500/20 text-red-400 border-red-500/30',
